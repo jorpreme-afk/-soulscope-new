@@ -42,7 +42,6 @@ const OB = [
   { emoji:"💌", title:"보고 결정하면\n돼요", desc:"궁합 점수, 100년 이야기,\n두 사람의 대화 하이라이트까지." },
 ];
 
-// 소울 로컬 응답 — API 실패시 맥락 기반 즉시 반환 (반복 방지 포함)
 const LOCAL_SOUL_POOL = {
   "사업매출돈": ["그게 계속되면 진짜 지치죠. 요즘 어떻게 버티고 있어요?","매출 걱정이 크겠다. 언제부터 그랬어요?","일이 잘 안 될 때 어떻게 버텨요?"],
   "잠수면": ["밤에 어떤 생각이 제일 많이 들어요?","잠 못 자는 게 얼마나 됐어요?","밤이 제일 힘들어요?"],
@@ -61,7 +60,6 @@ const LOCAL_SOUL_POOL = {
 function getLocalSoulResp(msg, turn, used, att) {
   const m = msg || "";
   const u = used || [];
-  // 키워드 매칭
   const keyMap = [
     ["사업매출돈", ["사업","매출","돈","수익","장사"]],
     ["잠수면", ["잠","못 자","수면","새벽","밤"]],
@@ -79,16 +77,13 @@ function getLocalSoulResp(msg, turn, used, att) {
   for (const [key, words] of keyMap) {
     if (words.some(w => m.includes(w))) { poolKey = key; break; }
   }
-  // att별 분기 — secure에게 anxious 프레임 금지
   let finalKey = poolKey;
   if (poolKey === "버려떠날") {
     finalKey = (att === "anxious") ? "버려떠날_anxious" : "버려떠날_other";
   }
   const pool = LOCAL_SOUL_POOL[finalKey] || LOCAL_SOUL_POOL[poolKey] || LOCAL_SOUL_POOL["default"];
-  // 미사용 응답 우선
   const unused = pool.filter(r => !u.includes(r));
   if (unused.length > 0) return unused[turn % unused.length];
-  // 전부 사용됐으면 default pool에서
   const defUnused = LOCAL_SOUL_POOL["default"].filter(r => !u.includes(r));
   return defUnused.length > 0 ? defUnused[0] : "그렇군요.";
 }
@@ -183,6 +178,15 @@ function BNav({ tab, onSwitch, notif, pct, onLocked }) {
   );
 }
 
+// ─── 구글 로그인 핸들러 ───────────────────────────────────────────────
+function handleGoogleLogin() {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  // 환경에 따라 redirectTo 자동 결정
+  const redirectTo = import.meta.env.VITE_SITE_URL || window.location.origin;
+  const url = `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}`;
+  window.location.href = url;
+}
+
 export default function App() {
   const [screen, setScreen] = useState("join");
   const [tab, setTab] = useState("soul");
@@ -267,7 +271,6 @@ export default function App() {
     setChips([]); setSoulBusy(true);
     const uAll = soulHist.current.filter(m => m.role === "user").map(m => m.content);
     const att = uAll.length >= 2 ? detectAtt(uAll) : "unknown";
-    // Promise.race — 8초 안에 API 응답 없으면 로컬
     const usedResps = soulHist.current.filter(m=>m.role==="assistant").map(m=>m.content);
     let resp;
     try {
@@ -277,17 +280,14 @@ export default function App() {
     } catch {
       resp = getLocalSoulResp(text, nt, usedResps);
     }
-    // 질문 2개 이상이면 첫 번째만
     const qParts = resp.match(/[^.!?？。]*[?？]/g);
     if (qParts && qParts.length > 1) resp = qParts[0].trim();
-    // 80자 초과 시 자르기
     if (resp.length > 80) resp = resp.slice(0, 80).replace(/[,，]?$/, '') + '.';
 
     setSoulMsgs(p => [...p, { role:"soul", text:resp }]);
     soulHist.current.push({ role:"assistant", content:resp });
     if (nt === 5) setTimeout(() => setSoulMsgs(p => [...p, { role:"note", text:`페르소나 발견 ✦ 소울이 ${nick}을 조금 알게 됐어요` }]), 400);
     setChips(getContextChips(text));
-    // vec 로컬 분석
     if (nt % 5 === 0) {
       const joined = uAll.join(" ");
       const a = ["불안","무서","버려","확인","걱정","긴장","자책","두렵"].filter(w=>joined.includes(w)).length;
@@ -310,7 +310,6 @@ export default function App() {
     setChatMsgs(p => [...p, { role:"user", text:msg }]);
     chatHist.current.push({ role:"user", content:msg });
     setChatBusy(true);
-    // 지현 로컬 응답 풀
     const JIHYUN_LOCAL = [
       "그렇군요.", "아, 그렇구나.", "그게 어떤 느낌이에요?",
       "저도 그런 적 있어요.", "음... 그거 쉽지 않았겠다.",
@@ -375,14 +374,20 @@ export default function App() {
                   </div>
                 ))}
               </div>
-              {/* 카카오 버튼 */}
-              <button onClick={() => {
-                const url = `${import.meta.env.VITE_SUPABASE_URL}/auth/v1/authorize?provider=kakao&redirect_to=${encodeURIComponent(window.location.origin)}&scopes=profile_nickname`;
-                window.location.href = url;
-              }}
-                style={{ width:"100%", padding:15, background:"#FEE500", color:"#191919", border:"none", fontSize:15, fontWeight:700, cursor:"pointer", marginBottom:8, display:"flex", alignItems:"center", justifyContent:"center", gap:9 }}>
-                <span style={{ fontSize:18 }}>💬</span>카카오로 시작하기
+
+              {/* ── 구글 로그인 버튼 (카카오 → 구글로 교체) ── */}
+              <button onClick={handleGoogleLogin}
+                style={{ width:"100%", padding:15, background:"#fff", color:"#3c4043", border:"1px solid #dadce0", fontSize:15, fontWeight:500, cursor:"pointer", marginBottom:8, display:"flex", alignItems:"center", justifyContent:"center", gap:10 }}>
+                {/* 구글 공식 G 아이콘 */}
+                <svg width="18" height="18" viewBox="0 0 18 18">
+                  <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/>
+                  <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
+                  <path fill="#FBBC05" d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z"/>
+                  <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.163 6.656 3.58 9 3.58z"/>
+                </svg>
+                구글로 시작하기
               </button>
+
               <div style={{ display:"flex", alignItems:"center", gap:12, margin:"14px 0" }}>
                 <div style={{ flex:1, height:1, background:C.rule }} />
                 <span style={{ fontSize:10, color:C.dim }}>닉네임으로 시작</span>
@@ -440,7 +445,6 @@ export default function App() {
         {/* 메인 */}
         {screen === "main" && (
           <>
-            {/* 소울 탭 */}
             {tab === "soul" && (
               <div style={{ display:"flex", flexDirection:"column", flex:1, overflow:"hidden" }}>
                 <div style={{ height:50, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 18px", borderBottom:`1px solid ${C.rule}`, flexShrink:0 }}>
@@ -497,7 +501,6 @@ export default function App() {
               </div>
             )}
 
-            {/* 매칭 탭 */}
             {tab === "match" && (
               <div style={{ display:"flex", flexDirection:"column", flex:1, overflow:"hidden" }}>
                 <div style={{ height:50, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 18px", borderBottom:`1px solid ${C.rule}`, flexShrink:0 }}>
@@ -554,7 +557,6 @@ export default function App() {
               </div>
             )}
 
-            {/* 결과 탭 */}
             {tab === "result" && (
               <div style={{ display:"flex", flexDirection:"column", flex:1, overflow:"hidden" }}>
                 <div style={{ height:50, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 18px", borderBottom:`1px solid ${C.rule}`, flexShrink:0 }}>
@@ -603,7 +605,6 @@ export default function App() {
               </div>
             )}
 
-            {/* 채팅 탭 */}
             {tab === "chat" && (
               <div style={{ display:"flex", flexDirection:"column", flex:1, overflow:"hidden" }}>
                 <div style={{ height:50, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 18px", borderBottom:`1px solid ${C.rule}`, flexShrink:0 }}>
@@ -653,7 +654,6 @@ export default function App() {
               </div>
             )}
 
-            {/* 나 탭 */}
             {tab === "me" && (
               <div style={{ display:"flex", flexDirection:"column", flex:1, overflow:"hidden" }}>
                 <div style={{ height:50, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 18px", borderBottom:`1px solid ${C.rule}`, flexShrink:0 }}>
@@ -708,7 +708,6 @@ export default function App() {
               </div>
             )}
 
-            {/* 결과 시트 */}
             {showSheet && sheetCard && (
               <div onClick={() => setShowSheet(false)}
                 style={{ position:"absolute", inset:0, background:"rgba(26,17,8,.5)", display:"flex", flexDirection:"column", justifyContent:"flex-end", zIndex:20, animation:"up .2s ease" }}>
@@ -788,7 +787,6 @@ export default function App() {
           </>
         )}
 
-        {/* 토스트 */}
         {toast && (
           <div style={{ position:"absolute", bottom:80, left:"50%", transform:"translateX(-50%)", background:C.ink, color:C.bg, padding:"10px 18px", fontSize:12, whiteSpace:"nowrap", zIndex:30, animation:"up .3s ease", pointerEvents:"none" }}>
             {toast}
