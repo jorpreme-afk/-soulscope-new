@@ -376,21 +376,9 @@ export default function App() {
                 ))}
               </div>
               {/* 카카오 버튼 */}
-              <button onClick={async () => {
-                const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-                const supabase = createClient(
-                  import.meta.env.VITE_SUPABASE_URL,
-                  import.meta.env.VITE_SUPABASE_KEY
-                );
-                await supabase.auth.signInWithOAuth({
-                  provider: 'kakao',
-                  options: {
-                    redirectTo: window.location.origin,
-                    queryParams: {
-                      scope: 'profile_nickname profile_image'
-                    }
-                  }
-                });
+              <button onClick={() => {
+                const url = `${import.meta.env.VITE_SUPABASE_URL}/auth/v1/authorize?provider=kakao&redirect_to=${encodeURIComponent(window.location.origin)}&scopes=profile_nickname`;
+                window.location.href = url;
               }}
                 style={{ width:"100%", padding:15, background:"#FEE500", color:"#191919", border:"none", fontSize:15, fontWeight:700, cursor:"pointer", marginBottom:8, display:"flex", alignItems:"center", justifyContent:"center", gap:9 }}>
                 <span style={{ fontSize:18 }}>💬</span>카카오로 시작하기
