@@ -386,7 +386,9 @@ export default function App() {
                   provider: 'kakao',
                   options: {
                     redirectTo: window.location.origin,
-                    scopes: 'profile_nickname profile_image'
+                    queryParams: {
+                      scope: 'profile_nickname profile_image'
+                    }
                   }
                 });
               }}
