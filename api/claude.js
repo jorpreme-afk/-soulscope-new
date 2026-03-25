@@ -1,4 +1,4 @@
-javascriptexport default async function handler(req, res) {
+default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
   const { system, messages, max_tokens = 300 } = req.body;
 
