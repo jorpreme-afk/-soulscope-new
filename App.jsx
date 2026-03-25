@@ -271,7 +271,7 @@ export default function App() {
     const usedResps = soulHist.current.filter(m=>m.role==="assistant").map(m=>m.content);
     let resp;
     try {
-      const apiP = callAI(soulSys(nick, np, nt, att), soulHist.current.slice(-6), 120);
+      const apiP = callAI(soulSys(nick, np, nt, att), soulHist.current.slice(-20), 120);
       const toP = new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 8000));
       resp = await Promise.race([apiP, toP]);
     } catch {
