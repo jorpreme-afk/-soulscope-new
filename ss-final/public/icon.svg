@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#F9F5EF"/>
-  <rect width="512" height="6" rx="3" fill="#B8915A"/>
-  <!-- 중앙 심볼 -->
-  <text x="256" y="310" font-family="Georgia,serif" font-style="italic" font-size="200" font-weight="300" fill="#1A1108" text-anchor="middle">✦</text>
-  <!-- 하단 텍스트 -->
-  <text x="256" y="420" font-family="Georgia,serif" font-style="italic" font-size="42" font-weight="300" fill="#B8915A" text-anchor="middle">Soulscope</text>
-</svg>
