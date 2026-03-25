@@ -1,16 +1,10 @@
-default async function handler(req, res) {
+export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
   const { system, messages, max_tokens = 300 } = req.body;
-
-  const enhancedSystem = system + `
-
-절대 규칙:
-- 반드시 1~2문장으로만 답할 것. 3문장 이상 금지.
-- 질문은 1개만. 절대 2개 이상 금지.
-- 조언하지 말 것. 판단하지 말 것.
-- 친한 친구처럼 짧고 자연스럽게.
-- "~것 같은데", "~해야 해", "~하는 게 좋을 것 같아" 같은 조언 말투 금지.`;
-
+  const enhanced = system + `
+절대 규칙: 1~2문장만. 질문 1개만. 조언 금지. 판단 금지. 해결책 제시 금지.
+유저가 해결책을 물으면: "해결책보다 지금 어떤 기분인지가 더 궁금해요." 라고 답할 것.
+친한 친구처럼 짧고 자연스럽게. 공감하고 질문하는 게 전부.`;
   try {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -21,8 +15,8 @@ default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: Math.min(max_tokens, 200),
-        system: enhancedSystem,
+        max_tokens: 150,
+        system: enhanced,
         messages,
       }),
     });
