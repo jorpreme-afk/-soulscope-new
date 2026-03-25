@@ -383,9 +383,12 @@ export default function App() {
                   import.meta.env.VITE_SUPABASE_KEY
                 );
                 await supabase.auth.signInWithOAuth({
-                  provider: 'kakao',
-                  options: { redirectTo: window.location.origin }
-                });
+  provider: 'kakao',
+  options: {
+    redirectTo: window.location.origin,
+    scopes: 'profile_nickname profile_image'
+  }
+});
               }}
                 style={{ width:"100%", padding:15, background:"#FEE500", color:"#191919", border:"none", fontSize:15, fontWeight:700, cursor:"pointer", marginBottom:8, display:"flex", alignItems:"center", justifyContent:"center", gap:9 }}>
                 <span style={{ fontSize:18 }}>💬</span>카카오로 시작하기
